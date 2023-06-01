@@ -5,46 +5,38 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.function.Consumer;
 
-public abstract class Connection {
+public class Connection {
 	
 	private Socket socket;
 	private Thread thread;
 	private PrintWriter writer;
 	private BufferedReader reader;
-	private String id = null;
 	
-	public Connection(Socket socket, String clientId) throws IOException, LocalchatException {
+	private ArrayList<Consumer<String>> messageListeners = new ArrayList<>();
+	private ArrayList<Runnable> closeListeners = new ArrayList<>();
+	
+	public Connection(Socket socket) throws IOException {
 		this.socket = socket;
 		writer = new PrintWriter(socket.getOutputStream());
 		reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-		writer.write("#id#" + clientId + "\n");
-		writer.flush();
-		String firstLine = reader.readLine();
-		if (!firstLine.startsWith("#id#"))
-			throw new LocalchatException("Not a localchat socket");
-		id = firstLine.substring(4);
 		thread = new Thread(() -> {
-			while (socket.isConnected()) {
-				try {
-					String line = reader.readLine();
-					if (line != null) {
-						onMessage(line);
-					} else {
-						close();
-						break;
-					}
-				} catch (IOException e) {
-					e.printStackTrace();
+			try {
+				String line;
+				while (!socket.isClosed() && (line = reader.readLine()) != null) {
+					final String message = line;
+					for (int i = 0; i < messageListeners.size(); i++)
+						messageListeners.get(i).accept(message);
 				}
+			} catch (IOException e) {
+				e.printStackTrace();
 			}
+			close();
 		});
 		thread.start();
 	}
-
-	public abstract void onMessage(String message);
-	
-	public abstract void onClose();
 	
 	public void send(String message) {
 		writer.println(message);
@@ -60,16 +52,15 @@ public abstract class Connection {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		onClose();
+		closeListeners.forEach(l -> l.run());
 	}
 	
-	@Override
-	public String toString() {
-		return Integer.toHexString(hashCode()) + "@" + socket.getInetAddress();
+	public void addMessageListener(Consumer<String> listener) {
+		messageListeners.add(listener);
 	}
 	
-	public String getId() {
-		return id;
+	public void addCloseListener(Runnable listener) {
+		closeListeners.add(listener);
 	}
 	
 }

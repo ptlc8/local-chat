@@ -47,9 +47,11 @@ public class Window {
 	 */
 	public Window() {
 		client = new Client(8686);
+		client.startListening();
+		client.searchPeers();
+		initialize();
 		client.addJoinListener(c -> connectionsModel.addElement(c));
 		client.addLeaveListener(c -> connectionsModel.removeElement(c));
-		initialize();
 	}
 
 	/**
@@ -57,7 +59,7 @@ public class Window {
 	 */
 	private void initialize() {
 		frmLocalChat = new JFrame();
-		frmLocalChat.setTitle("Local chat");
+		frmLocalChat.setTitle("Local chat - " + client.getId());
 		frmLocalChat.setBounds(100, 100, 450, 300);
 		frmLocalChat.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		
@@ -71,6 +73,7 @@ public class Window {
 					client.stopListening();
 			}
 		});
+		chckbxListening.setSelected(client.isListening());
 		horizontalBox.add(chckbxListening);
 		
 		JButton btnSearchPeers = new JButton("Search peers");
