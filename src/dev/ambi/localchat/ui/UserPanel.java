@@ -8,11 +8,13 @@ import javax.swing.JList;
 
 import java.util.function.Consumer;
 
-import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
 import javax.swing.border.LineBorder;
+
+import java.awt.BorderLayout;
 import java.awt.Color;
 import javax.swing.JScrollPane;
+import javax.swing.JTextField;
 
 public class UserPanel extends JPanel {
 
@@ -25,7 +27,7 @@ public class UserPanel extends JPanel {
 	 * Create the panel.
 	 */
 	public UserPanel(User user) {
-		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+		setLayout(new BorderLayout(0, 0));
 		
 		JList<Message> list = new JList<>(messagesModel);
 		list.setBorder(new LineBorder(new Color(0, 0, 0)));
@@ -33,6 +35,15 @@ public class UserPanel extends JPanel {
 		
 		JScrollPane scrollPane = new JScrollPane(list);
 		add(scrollPane);
+		
+		JTextField messageField = new JTextField();
+		messageField.addActionListener(e -> {
+			if (this.user != null && this.user.sendMessage(messageField.getText())) {
+				messageField.setText("");
+			}
+		});	
+		add(messageField, BorderLayout.SOUTH);
+		messageField.setColumns(10);
 		
 		onMessage = m -> messagesModel.addElement(m);
 		setUser(user);

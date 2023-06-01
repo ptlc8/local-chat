@@ -25,7 +25,7 @@ public class Client {
 		p2p.addDataListener(String.class, this::onMessage);
 		p2p.startListening();
 		p2p.searchPeers();
-		selfUser = new User(p2p.getId());
+		selfUser = new User(this, p2p.getId());
 	}
 	
 	public ClientP2p getP2p() {
@@ -53,7 +53,7 @@ public class Client {
 	}
 	
 	private void onJoin(Id id) {
-		User user = new User(id);
+		User user = new User(this, id);
 		users.put(id, user);
 		joinListeners.forEach(l -> l.accept(user));
 	}

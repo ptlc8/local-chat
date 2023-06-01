@@ -1,5 +1,6 @@
 package dev.ambi.localchat.network;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -28,6 +29,8 @@ public class Connection {
 					for (int i = 0; i < dataListeners.size(); i++)
 						dataListeners.get(i).accept(data);
 				}
+			} catch (EOFException e) {
+				// do nothing
 			} catch (IOException | ClassNotFoundException e) {
 				e.printStackTrace();
 			}

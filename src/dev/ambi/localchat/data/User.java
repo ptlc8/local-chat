@@ -7,17 +7,23 @@ import java.util.function.Consumer;
 
 public class User {
 	
+	private Client client;
 	private Id id;
 	private ArrayList<Message> messages = new ArrayList<>();
 	
 	private ArrayList<Consumer<Message>> messageListeners = new ArrayList<>();
 	
-	public User(Id id) {
+	public User(Client client, Id id) {
+		this.client = client;
 		this.id = id;
 	}
 	
 	public Id getId() {
 		return id;
+	}
+	
+	public boolean sendMessage(String content) {
+		return client.sendMessage(this, content);
 	}
 	
 	void addMessage(Message message) {
