@@ -1,30 +1,31 @@
 package dev.ambi.localchat.network;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
+import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import dev.ambi.localchat.data.Id;
 
-public class Client {
+public class ClientP2p {
 	
 	private Id id;
 	private final int mainPort;
 	private final int maxPort;
 	private ListeningServer listeningServer = null;
-	private HashMap<Id, ChatConnection> connections = new HashMap<>();
+	private HashMap<Id, IdentifiedConnection> connections = new HashMap<>();
 	
-	private ArrayList<Consumer<ChatConnection>> joinListeners = new ArrayList<>();
-	private ArrayList<Consumer<ChatConnection>> leaveListeners = new ArrayList<>();
-	private ArrayList<BiConsumer<ChatConnection, String>> messageListeners = new ArrayList<>();
+	private ArrayList<Consumer<Id>> joinListeners = new ArrayList<>();
+	private ArrayList<Consumer<Id>> leaveListeners = new ArrayList<>();
+	private HashMap<Class<? extends Serializable>, ArrayList<BiConsumer<Id, Object>>> dataListeners = new HashMap<>();
 	
-	public Client(int port) {
+	public ClientP2p(int port) {
 		this.id = new Id();
 		this.mainPort = port;
 		this.maxPort = port + 10;
@@ -117,17 +118,17 @@ public class Client {
 	
 	private void onAcceptSocket(Socket socket) {
 		try {
-			ChatConnection connection = new ChatConnection(socket, id);
+			IdentifiedConnection connection = new IdentifiedConnection(socket, id);
 			connection.addOpenListener(() -> onJoin(connection));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 	
-	private void onJoin(ChatConnection connection) {
+	private void onJoin(IdentifiedConnection connection) {
 		if (connection.getId().equals(id)) {
 			connection.close();
-			System.out.println("[" + id + "] Can connect to itself");
+			System.out.println("[" + id + "] Can't connect to itself");
 			return;
 		}
 		if (connections.containsKey(connection.getId())) {
@@ -137,39 +138,56 @@ public class Client {
 		}
 		connections.put(connection.getId(), connection);
 		System.out.println("[" + id + "] " + connection.getId() + " joins");
-		connection.addMessageListener(m -> onMessage(connection, m));
+		connection.addDataListener(d -> onData(connection, d));
 		connection.addCloseListener(() -> onLeave(connection));
-		joinListeners.forEach(l -> l.accept(connection));
+		joinListeners.forEach(l -> l.accept(connection.getId()));
 	}
 	
-	private void onMessage(ChatConnection connection, String message) {
-		messageListeners.forEach(l -> l.accept(connection, message));
+	private void onData(IdentifiedConnection connection, Object data) {
+		ArrayList<BiConsumer<Id, Object>> listeners = dataListeners.get(data.getClass());
+		if (listeners == null) return;
+		listeners.forEach(l -> l.accept(connection.getId(), data));
 	}
 	
-	private void onLeave(ChatConnection connection) {
+	private void onLeave(IdentifiedConnection connection) {
 		connections.remove(connection.getId());
 		System.out.println("[" + id + "] " + connection.getId() + " leaves");
-		leaveListeners.forEach(l -> l.accept(connection));
+		leaveListeners.forEach(l -> l.accept(connection.getId()));
 	}
+	
 	
 	public Id getId() {
 		return id;
 	}
 	
-	public Collection<ChatConnection> getConnections() {
-		return connections.values();
+	public Set<Id> getUsers() {
+		return connections.keySet();
 	}
 	
-	public void addJoinListener(Consumer<ChatConnection> listener) {
+	public void addJoinListener(Consumer<Id> listener) {
 		joinListeners.add(listener);
 	}
 	
-	public void addLeaveListener(Consumer<ChatConnection> listener) {
+	public void addLeaveListener(Consumer<Id> listener) {
 		leaveListeners.add(listener);
 	}
 	
-	public void addMessageListener(BiConsumer<ChatConnection, String> listener) {
-		messageListeners.add(listener);
+	public <T extends Serializable> void addDataListener(Class<T> clazz, BiConsumer<Id, Object> listener) {
+		if (!dataListeners.containsKey(clazz))
+			dataListeners.put(clazz, new ArrayList<>());
+		dataListeners.get(clazz).add(listener);
+	}
+	
+	public boolean send(Id id, Serializable data) {
+		if (!connections.containsKey(id))
+			return false;
+		try {
+			connections.get(id).send(data);
+			return true;
+		} catch (IOException e) {
+			e.printStackTrace();
+			return false;
+		}
 	}
 	
 }

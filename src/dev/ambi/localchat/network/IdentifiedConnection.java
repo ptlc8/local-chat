@@ -3,26 +3,30 @@ package dev.ambi.localchat.network;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.function.Consumer;
 
 import dev.ambi.localchat.data.Id;
 
-public class ChatConnection extends Connection {
+public class IdentifiedConnection extends Connection {
 	
 	private Id id = null;
 	private ArrayList<Runnable> openListeners = new ArrayList<>();
 
-	public ChatConnection(Socket socket, Id idToSend) throws IOException {
+	public IdentifiedConnection(Socket socket, Id idToSend) throws IOException {
 		super(socket);
-		addMessageListener(m -> {
-			if (!m.startsWith("#id#")) {
+		Consumer<Object> listener = data -> {
+			if (id != null) return;
+			if (data instanceof Id) {
+				IdentifiedConnection.this.id = (Id) data;
+				openListeners.forEach(l -> l.run());
+			} else {
 				close();
 				System.out.println("Not a localchat socket");
 				return;
 			}
-			ChatConnection.this.id = new Id(m.substring(4));
-			openListeners.forEach(l -> l.run());
-		});
-		send("#id#" + idToSend);
+		};
+		addDataListener(listener);
+		send(idToSend);
 	}
 
 	public Id getId() {
@@ -31,11 +35,6 @@ public class ChatConnection extends Connection {
 	
 	public void addOpenListener(Runnable listener) {
 		openListeners.add(listener);
-	}
-	
-	@Override
-	public String toString() {
-		return "Chat " + id;
 	}
 
 }

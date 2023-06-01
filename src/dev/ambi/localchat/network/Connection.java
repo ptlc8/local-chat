@@ -1,9 +1,8 @@
 package dev.ambi.localchat.network;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.function.Consumer;
@@ -12,25 +11,24 @@ public class Connection {
 	
 	private Socket socket;
 	private Thread thread;
-	private PrintWriter writer;
-	private BufferedReader reader;
+	private ObjectOutputStream writer;
+	private ObjectInputStream reader;
 	
-	private ArrayList<Consumer<String>> messageListeners = new ArrayList<>();
+	private ArrayList<Consumer<Object>> dataListeners = new ArrayList<>();
 	private ArrayList<Runnable> closeListeners = new ArrayList<>();
 	
 	public Connection(Socket socket) throws IOException {
 		this.socket = socket;
-		writer = new PrintWriter(socket.getOutputStream());
-		reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+		writer = new ObjectOutputStream(socket.getOutputStream());
+		reader = new ObjectInputStream(socket.getInputStream());
 		thread = new Thread(() -> {
 			try {
-				String line;
-				while (!socket.isClosed() && (line = reader.readLine()) != null) {
-					final String message = line;
-					for (int i = 0; i < messageListeners.size(); i++)
-						messageListeners.get(i).accept(message);
+				while (!socket.isClosed()) {
+					final Object data = reader.readObject();
+					for (int i = 0; i < dataListeners.size(); i++)
+						dataListeners.get(i).accept(data);
 				}
-			} catch (IOException e) {
+			} catch (IOException | ClassNotFoundException e) {
 				e.printStackTrace();
 			}
 			close();
@@ -38,15 +36,15 @@ public class Connection {
 		thread.start();
 	}
 	
-	public void send(String message) {
-		writer.println(message);
+	public void send(Object data) throws IOException {
+		writer.writeObject(data);
 		writer.flush();
 	}
 	
 	public void close() {
 		thread.interrupt();
-		writer.close();
 		try {
+			writer.close();
 			reader.close();
 			socket.close();
 		} catch (IOException e) {
@@ -55,10 +53,10 @@ public class Connection {
 		closeListeners.forEach(l -> l.run());
 	}
 	
-	public void addMessageListener(Consumer<String> listener) {
-		messageListeners.add(listener);
+	public void addDataListener(Consumer<Object> listener) {
+		dataListeners.add(listener);
 	}
-	
+
 	public void addCloseListener(Runnable listener) {
 		closeListeners.add(listener);
 	}

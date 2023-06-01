@@ -1,9 +1,11 @@
 package dev.ambi.localchat.data;
 
+import java.io.Serializable;
 import java.util.Random;
 
-public class Id {
+public class Id implements Serializable {
 	
+	private static final long serialVersionUID = 1L;
 	private int value;
 	
 	public Id() {
@@ -18,5 +20,15 @@ public class Id {
 	public String toString() {
 		return String.format("%8X", value);
 	}
-
+	
+	@Override
+	public int hashCode() {
+		return value;
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		return this == obj || (obj instanceof Id && ((Id)obj).value == value);
+	}
+	
 }
