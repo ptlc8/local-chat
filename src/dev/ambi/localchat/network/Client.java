@@ -7,24 +7,25 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Random;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
+import dev.ambi.localchat.data.Id;
+
 public class Client {
 	
-	private String id;
+	private Id id;
 	private final int mainPort;
 	private final int maxPort;
 	private ListeningServer listeningServer = null;
-	private HashMap<String, ChatConnection> connections = new HashMap<>();
+	private HashMap<Id, ChatConnection> connections = new HashMap<>();
 	
 	private ArrayList<Consumer<ChatConnection>> joinListeners = new ArrayList<>();
 	private ArrayList<Consumer<ChatConnection>> leaveListeners = new ArrayList<>();
 	private ArrayList<BiConsumer<ChatConnection, String>> messageListeners = new ArrayList<>();
 	
 	public Client(int port) {
-		this.id = generateRandomId(8);
+		this.id = new Id();
 		this.mainPort = port;
 		this.maxPort = port + 10;
 	}
@@ -116,7 +117,7 @@ public class Client {
 	
 	private void onAcceptSocket(Socket socket) {
 		try {
-			ChatConnection connection = new ChatConnection(socket, getId());
+			ChatConnection connection = new ChatConnection(socket, id);
 			connection.addOpenListener(() -> onJoin(connection));
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -124,7 +125,7 @@ public class Client {
 	}
 	
 	private void onJoin(ChatConnection connection) {
-		if (connection.getId().equals(getId())) {
+		if (connection.getId().equals(id)) {
 			connection.close();
 			System.out.println("[" + id + "] Can connect to itself");
 			return;
@@ -151,7 +152,7 @@ public class Client {
 		leaveListeners.forEach(l -> l.accept(connection));
 	}
 	
-	public String getId() {
+	public Id getId() {
 		return id;
 	}
 	
@@ -169,16 +170,6 @@ public class Client {
 	
 	public void addMessageListener(BiConsumer<ChatConnection, String> listener) {
 		messageListeners.add(listener);
-	}
-	
-	public String generateRandomId(int length) {
-		String id = "";
-		String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-		Random rdm = new Random();
-		for (int i = 0; i < length; i++) {
-			id += characters.charAt(rdm.nextInt(characters.length()));
-		}
-		return id;
 	}
 	
 }
