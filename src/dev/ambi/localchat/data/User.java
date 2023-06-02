@@ -5,6 +5,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
+import javax.swing.ImageIcon;
+
 public class User {
 	
 	private Client client;
@@ -33,6 +35,10 @@ public class User {
 	
 	public List<Message> getMessages() {
 		return Collections.unmodifiableList(messages);
+	}
+
+	public boolean sendImage(ImageIcon image) {
+		return client.sendImage(this, image);
 	}
 	
 	public void addMessageListener(Consumer<Message> listener) {

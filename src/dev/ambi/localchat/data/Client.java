@@ -6,6 +6,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.function.Consumer;
 
+import javax.swing.ImageIcon;
+
 import dev.ambi.localchat.network.ClientP2p;
 
 public class Client {
@@ -23,6 +25,7 @@ public class Client {
 		p2p.addJoinListener(this::onJoin);
 		p2p.addLeaveListener(this::onLeave);
 		p2p.addDataListener(String.class, this::onMessage);
+		p2p.addDataListener(ImageIcon.class, this::onImage);
 		p2p.startListening();
 		p2p.searchPeers();
 		selfUser = new User(this, p2p.getId());
@@ -51,6 +54,14 @@ public class Client {
 			return true;
 		} else return false;
 	}
+
+	public boolean sendImage(User user, ImageIcon image) {
+		if (user == null) return false;
+		if (p2p.send(user.getId(), image)) {
+			user.addMessage(new ImageMessage(selfUser, image));
+			return true;
+		} else return false;
+	}
 	
 	private void onJoin(Id id) {
 		User user = new User(this, id);
@@ -61,6 +72,11 @@ public class Client {
 	private void onMessage(Id id, Object data) {
 		User user = users.get(id);
 		user.addMessage(new Message(user, (String)data));
+	}
+	
+	private void onImage(Id id, Object data) {
+		User user = users.get(id);
+		user.addMessage(new ImageMessage(user, (ImageIcon)data));
 	}
 	
 	private void onLeave(Id id) {
@@ -76,6 +92,5 @@ public class Client {
 	public void addLeaveListener(Consumer<User> listener) {
 		leaveListeners.add(listener);
 	}
-	
 
 }
