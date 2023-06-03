@@ -18,7 +18,7 @@ public abstract class ListeningServer extends ServerSocket {
 			} catch (IOException e) {
 				// onclose
 			}
-		});
+		}, "Listening sockets thread");
 		acceptThread.start();
 	}
 	

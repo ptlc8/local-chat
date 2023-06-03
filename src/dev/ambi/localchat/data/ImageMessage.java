@@ -4,16 +4,16 @@ import javax.swing.ImageIcon;
 
 public class ImageMessage implements Message {
 	
-	private Username sender;
+	private User sender;
 	private ImageIcon image;
 
-	public ImageMessage(Username sender, ImageIcon image) {
+	public ImageMessage(User sender, ImageIcon image) {
 		this.sender = sender;
 		this.image = image;
 	}
 	
 	@Override
-	public Username getSender() {
+	public User getSender() {
 		return sender;
 	}
 	

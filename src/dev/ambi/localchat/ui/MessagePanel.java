@@ -23,13 +23,13 @@ public class MessagePanel extends JPanel {
 	public MessagePanel(Message message, int maxWidth, int maxHeight) {
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 		
-		senderLabel = new JLabel("sender");
-		senderLabel.setFont(new Font("Dialog", Font.BOLD, 10));
+		senderLabel = new JLabel("sender:");
 		add(senderLabel);
 		
 		contentLabel = new JLabel("content");
+		contentLabel.setFont(new Font("Dialog", Font.BOLD, 15));
 		add(contentLabel);
-		senderLabel.setText(message.getSender().toString());
+		senderLabel.setText(message.getSender() + ":");
 		senderLabel.setForeground(new Color(message.getSender().getColor()));
 		if (message instanceof ImageMessage) {
 			contentLabel.setIcon(ImageLoader.resize(((ImageMessage)message).getImage(), maxWidth, maxHeight));

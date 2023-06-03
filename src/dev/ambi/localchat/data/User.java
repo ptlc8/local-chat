@@ -3,6 +3,7 @@ package dev.ambi.localchat.data;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 import java.util.function.Consumer;
 
 import javax.swing.ImageIcon;
@@ -12,48 +13,81 @@ import dev.ambi.localchat.network.Connection;
 public class User {
 	
 	private Connection connection;
-	private Username selfUsername;
-	private Username username;
+	private User selfUser;
+	private String name;
 	private ArrayList<Message> messages = new ArrayList<>();
 	
 	private ArrayList<Consumer<Message>> messageListeners = new ArrayList<>();
+	private ArrayList<Runnable> identifyListeners = new ArrayList<>();
 	
-	public User(Username selfUsername, Connection connection) {
-		this.selfUsername = selfUsername;
+	public User(User selfUser, Connection connection) {
+		this.selfUser = selfUser;
 		this.connection = connection;
 		connection.addDataListener(this::onData);
-		connection.send(selfUsername);
+	}
+	
+	public User(String name) {
+		this.selfUser = this;
+		this.name = name;
+		this.connection = null;
 	}
 	
 	private void onData(Object data) {
-		System.out.println(data.getClass().getName());
-		if (username == null) {
-			if (data instanceof Username)
-				username = (Username) data;
-			else
-				return;
+		if (Request.IDENTIFY.equals(data)) {
+			connection.send(selfUser.getName());
+			return;
+		}
+		if (name == null) {
+			if (data instanceof String) {
+				name = (String) data;
+				identifyListeners.forEach(l -> l.run());
+			}
+			return;
 		}
 		if (data instanceof String)
-			addMessage(new TextMessage(username, (String)data));
+			addMessage(new TextMessage(this, (String)data));
 		else if (data instanceof ImageIcon)
-			addMessage(new ImageMessage(username, (ImageIcon)data));
+			addMessage(new ImageMessage(this, (ImageIcon)data));
+	}
+	
+	private void addMessage(Message message) {
+		messages.add(message);
+		messageListeners.forEach(l -> l.accept(message));
+	}
+	
+	public void identify() {
+		new Thread(() -> {
+			try {
+				while (!connection.isClosed() && name == null) {
+					connection.send(Request.IDENTIFY);
+						Thread.sleep(100);
+				}
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}, "Waiting identify thread").run();
 	}
 	
 	public void disconnect() {
 		connection.close();
 	}
 	
-	public Username getUsername() {
-		return username;
+	public String getName() {
+		return name;
 	}
 	
-	void setUsername(Username username) {
-		this.username = username;
-	}
-	
-	void addMessage(Message message) {
-		messages.add(message);
-		messageListeners.forEach(l -> l.accept(message));
+	public int getColor() {
+		Random rdm = new Random(hashCode());
+		int r = rdm.nextInt(192);
+		int g = rdm.nextInt(192);
+		int b = rdm.nextInt(192);
+		if (r > g && r > b) r = 191;
+		if (r < g && r < b) r = 0;
+		if (g > r && g > b) g = 191;
+		if (g < r && g < b) g = 0;
+		if (b > g && b > r) b = 191;
+		if (b < g && b < r) b = 0;
+		return ((r << 8) + g << 8) + b;
 	}
 	
 	public List<Message> getMessages() {
@@ -62,7 +96,7 @@ public class User {
 	
 	public boolean sendMessage(String content) {
 		if (connection.send(content)) {
-			addMessage(new TextMessage(selfUsername, content));
+			addMessage(new TextMessage(selfUser, content));
 			return true;
 		}
 		return false;
@@ -70,7 +104,7 @@ public class User {
 
 	public boolean sendImage(ImageIcon image) {
 		if (connection.send(image)) {
-			addMessage(new ImageMessage(selfUsername, image));
+			addMessage(new ImageMessage(selfUser, image));
 			return true;
 		}
 		return false;
@@ -84,14 +118,23 @@ public class User {
 		messageListeners.remove(listener);
 	}
 	
+	public void addIdentifyListener(Runnable listener) {
+		identifyListeners.add(listener);
+	}
+	
 	@Override
 	public String toString() {
-		return username == null ? "Unknown user" : username.getText();
+		return name == null ? "Unknown user" : name;
 	}
 	
 	@Override
 	public boolean equals(Object obj) {
-		return this == obj || (obj instanceof User && ((User)obj).username.equals(username));
+		return this == obj || (obj instanceof User && name != null && name.equals(((User)obj).name));
+	}
+	
+	@Override
+	public int hashCode() {
+		return name.hashCode();
 	}
 	
 }

@@ -1,30 +1,24 @@
 package dev.ambi.localchat.network;
 
 import java.io.IOException;
-import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Set;
+import java.util.HashSet;
 import java.util.function.Consumer;
-
-import dev.ambi.localchat.data.Id;
 
 public class ClientP2p {
 	
-	private Id id;
 	private final int mainPort;
 	private final int maxPort;
 	private ListeningServer listeningServer = null;
-	private HashMap<Id, IdentifiedConnection> connections = new HashMap<>();
+	private HashSet<Connection> connections = new HashSet<>();
 	
-	private ArrayList<Consumer<IdentifiedConnection>> joinListeners = new ArrayList<>();
-	private ArrayList<Consumer<IdentifiedConnection>> leaveListeners = new ArrayList<>();
+	private ArrayList<Consumer<Connection>> joinListeners = new ArrayList<>();
+	private ArrayList<Consumer<Connection>> leaveListeners = new ArrayList<>();
 	
 	public ClientP2p(int port) {
-		this.id = new Id();
 		this.mainPort = port;
 		this.maxPort = port + 10;
 	}
@@ -49,7 +43,7 @@ public class ClientP2p {
 					onAcceptSocket(socket);
 				}
 			};
-			System.out.println("[" + id + "] Listening on port " + port);
+			System.out.println("[" + hashCode() + "] Listening on port " + port);
 			return true;
 		} catch (IOException e) {
 			return false;
@@ -63,7 +57,7 @@ public class ClientP2p {
 			e.printStackTrace();
 		}
 		listeningServer = null;
-		System.out.println("[" + id + "] Stop listening");
+		System.out.println("[" + hashCode() + "] Stop listening");
 	}
 	
 	public boolean isListening() {
@@ -71,7 +65,7 @@ public class ClientP2p {
 	}
 	
 	public void searchPeers() {
-		System.out.println("[" + id + "] Searching peers...");
+		System.out.println("[" + hashCode() + "] Searching peers...");
 		try {
 			byte[] ip = InetAddress.getLocalHost().getAddress();
 			for (short i = 1; i <= 254; i++) {
@@ -84,7 +78,7 @@ public class ClientP2p {
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
-				}).start();
+				}, "Search peers thread").start();
 			}
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
@@ -116,57 +110,32 @@ public class ClientP2p {
 	
 	private void onAcceptSocket(Socket socket) {
 		try {
-			IdentifiedConnection connection = new IdentifiedConnection(socket, id);
-			connection.addOpenListener(() -> onJoin(connection));
+			Connection connection = new Connection(socket);
+			connections.add(connection);
+			System.out.println("[" + hashCode() + "] " + connection.hashCode() + " joins");
+			connection.addCloseListener(() -> onLeave(connection));
+			joinListeners.forEach(l -> l.accept(connection));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 	
-	private void onJoin(IdentifiedConnection connection) {
-		if (connection.getId().equals(id)) {
-			connection.close();
-			System.out.println("[" + id + "] Can't connect to itself");
-			return;
-		}
-		if (connections.containsKey(connection.getId())) {
-			connection.close();
-			System.out.println("[" + id + "] Connection already etablished");
-			return;
-		}
-		connections.put(connection.getId(), connection);
-		System.out.println("[" + id + "] " + connection.getId() + " joins");
-		connection.addCloseListener(() -> onLeave(connection));
-		joinListeners.forEach(l -> l.accept(connection));
-	}
-	
-	private void onLeave(IdentifiedConnection connection) {
-		connections.remove(connection.getId());
-		System.out.println("[" + id + "] " + connection.getId() + " leaves");
+	private void onLeave(Connection connection) {
+		connections.remove(connection);
+		System.out.println("[" + hashCode() + "] " + connection.hashCode() + " leaves");
 		leaveListeners.forEach(l -> l.accept(connection));
 	}
 	
-	
-	public Id getId() {
-		return id;
+	public HashSet<Connection> getConnections() {
+		return connections;
 	}
 	
-	public Set<Id> getIds() {
-		return connections.keySet();
-	}
-	
-	public void addJoinListener(Consumer<IdentifiedConnection> listener) {
+	public void addJoinListener(Consumer<Connection> listener) {
 		joinListeners.add(listener);
 	}
 	
-	public void addLeaveListener(Consumer<IdentifiedConnection> listener) {
+	public void addLeaveListener(Consumer<Connection> listener) {
 		leaveListeners.add(listener);
-	}
-	
-	public boolean send(Id id, Serializable data) {
-		if (!connections.containsKey(id))
-			return false;
-		return connections.get(id).send(data);
 	}
 	
 }

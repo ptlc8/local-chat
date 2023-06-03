@@ -2,16 +2,16 @@ package dev.ambi.localchat.data;
 
 public class TextMessage implements Message {
 	
-	private Username sender;
+	private User sender;
 	private String content;
 	
-	public TextMessage(Username sender, String content) {
+	public TextMessage(User sender, String content) {
 		this.sender = sender;
 		this.content = content;
 	}
 	
 	@Override
-	public Username getSender() {
+	public User getSender() {
 		return sender;
 	}
 	

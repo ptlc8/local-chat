@@ -13,14 +13,14 @@ public class Client {
 	
 	private ClientP2p p2p;
 	
-	private Username selfUserName;
+	private final User selfUser;
 	private HashMap<Connection, User> users = new HashMap<>();
 	
 	private ArrayList<Consumer<User>> joinListeners = new ArrayList<>();
 	private ArrayList<Consumer<User>> leaveListeners = new ArrayList<>();
 	
 	public Client(int port, String username) {
-		this.selfUserName = new Username(username);
+		this.selfUser = new User(username);
 		p2p = new ClientP2p(port);
 		p2p.addJoinListener(this::onJoin);
 		p2p.addLeaveListener(this::onLeave);
@@ -28,12 +28,40 @@ public class Client {
 		p2p.searchPeers();
 	}
 	
+	private void onJoin(Connection connection) {
+		User user = new User(selfUser, connection);
+		user.addIdentifyListener(() -> {
+			if (user.equals(selfUser)) {
+				connection.close();
+				System.out.println("[" + hashCode() + "] Can't connect to itself");
+				return;
+			}
+			if (users.containsValue(user)) {
+				connection.close();
+				System.out.println("[" + hashCode() + "] Connection already etablished");
+				return;
+			}
+			users.put(connection, user);
+			System.out.println("[" + hashCode() + "] " + user.getName() + " joins");
+			joinListeners.forEach(l -> l.accept(user));
+		});
+		user.identify();
+	}
+	
+	private void onLeave(Connection connection) {
+		User user = users.remove(connection);
+		if (user != null) {
+			System.out.println("[" + hashCode() + "] " + user.getName() + " leaves");
+			leaveListeners.forEach(l -> l.accept(user));
+		}
+	}
+	
 	public ClientP2p getP2p() {
 		return p2p;
 	}
 	
-	public Username getSelfUsername() {
-		return selfUserName;
+	public User getSelfUser() {
+		return selfUser;
 	}
 	
 	public Collection<User> getUsers() {
@@ -42,18 +70,6 @@ public class Client {
 	
 	public User getUser(Connection connection) {
 		return users.get(connection);
-	}
-	
-	private void onJoin(Connection connection) {
-		User user = new User(selfUserName, connection);
-		users.put(connection, user);
-		joinListeners.forEach(l -> l.accept(user));
-	}
-	
-	private void onLeave(Connection connection) {
-		User user = users.get(connection);
-		users.remove(connection);
-		leaveListeners.forEach(l -> l.accept(user));
 	}
 	
 	public void addJoinListener(Consumer<User> listener) {

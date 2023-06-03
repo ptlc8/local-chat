@@ -4,6 +4,8 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.OptionalDataException;
+import java.io.Serializable;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.function.Consumer;
@@ -29,17 +31,17 @@ public class Connection {
 					for (int i = 0; i < dataListeners.size(); i++)
 						dataListeners.get(i).accept(data);
 				}
-			} catch (EOFException e) {
+			} catch (EOFException | OptionalDataException e) {
 				// do nothing
 			} catch (IOException | ClassNotFoundException e) {
 				e.printStackTrace();
 			}
 			close();
-		});
+		}, "Connection reader thread");
 		thread.start();
 	}
 	
-	public boolean send(Object data) {
+	public <T extends Serializable> boolean send(T data) {
 		try {
 			writer.writeObject(data);
 			writer.flush();
@@ -68,6 +70,10 @@ public class Connection {
 
 	public void addCloseListener(Runnable listener) {
 		closeListeners.add(listener);
+	}
+	
+	public boolean isClosed() {
+		return socket.isClosed();
 	}
 	
 }
