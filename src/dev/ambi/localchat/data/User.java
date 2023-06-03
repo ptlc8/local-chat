@@ -33,21 +33,22 @@ public class User {
 	}
 	
 	private void onData(Object data) {
+		System.out.println(data);
 		if (Request.IDENTIFY.equals(data)) {
-			connection.send(selfUser.getName());
+			connection.send("username " + selfUser.getName());
 			return;
 		}
 		if (name == null) {
-			if (data instanceof String) {
-				name = (String) data;
+			if (data instanceof String && ((String) data).startsWith("username ")) {
+				name = ((String) data).replaceFirst("username ", "");
 				identifyListeners.forEach(l -> l.run());
 			}
 			return;
 		}
-		if (data instanceof String)
-			addMessage(new TextMessage(this, (String)data));
+		if (data instanceof String && ((String) data).startsWith("message "))
+			addMessage(new TextMessage(this, ((String) data).replaceFirst("message ", "")));
 		else if (data instanceof ImageIcon)
-			addMessage(new ImageMessage(this, (ImageIcon)data));
+			addMessage(new ImageMessage(this, (ImageIcon) data));
 	}
 	
 	private void addMessage(Message message) {
@@ -95,7 +96,7 @@ public class User {
 	}
 	
 	public boolean sendMessage(String content) {
-		if (connection.send(content)) {
+		if (connection.send("message " + content)) {
 			addMessage(new TextMessage(selfUser, content));
 			return true;
 		}
