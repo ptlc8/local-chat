@@ -6,82 +6,53 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.function.Consumer;
 
-import javax.swing.ImageIcon;
-
 import dev.ambi.localchat.network.ClientP2p;
+import dev.ambi.localchat.network.Connection;
 
 public class Client {
 	
 	private ClientP2p p2p;
 	
-	private User selfUser;
-	private HashMap<Id, User> users = new HashMap<>();
+	private Username selfUserName;
+	private HashMap<Connection, User> users = new HashMap<>();
 	
 	private ArrayList<Consumer<User>> joinListeners = new ArrayList<>();
 	private ArrayList<Consumer<User>> leaveListeners = new ArrayList<>();
 	
-	public Client(int port) {
+	public Client(int port, String username) {
+		this.selfUserName = new Username(username);
 		p2p = new ClientP2p(port);
 		p2p.addJoinListener(this::onJoin);
 		p2p.addLeaveListener(this::onLeave);
-		p2p.addDataListener(String.class, this::onMessage);
-		p2p.addDataListener(ImageIcon.class, this::onImage);
 		p2p.startListening();
 		p2p.searchPeers();
-		selfUser = new User(this, p2p.getId());
 	}
 	
 	public ClientP2p getP2p() {
 		return p2p;
 	}
 	
-	public User getSelfUser() {
-		return selfUser;
+	public Username getSelfUsername() {
+		return selfUserName;
 	}
 	
 	public Collection<User> getUsers() {
 		return Collections.unmodifiableCollection(users.values());
 	}
 	
-	public User getUser(Id id) {
-		return users.get(id);
+	public User getUser(Connection connection) {
+		return users.get(connection);
 	}
 	
-	public boolean sendMessage(User user, String message) {
-		if (user == null) return false;
-		if (p2p.send(user.getId(), message)) {
-			user.addMessage(new Message(selfUser, message));
-			return true;
-		} else return false;
-	}
-
-	public boolean sendImage(User user, ImageIcon image) {
-		if (user == null) return false;
-		if (p2p.send(user.getId(), image)) {
-			user.addMessage(new ImageMessage(selfUser, image));
-			return true;
-		} else return false;
-	}
-	
-	private void onJoin(Id id) {
-		User user = new User(this, id);
-		users.put(id, user);
+	private void onJoin(Connection connection) {
+		User user = new User(selfUserName, connection);
+		users.put(connection, user);
 		joinListeners.forEach(l -> l.accept(user));
 	}
 	
-	private void onMessage(Id id, Object data) {
-		User user = users.get(id);
-		user.addMessage(new Message(user, (String)data));
-	}
-	
-	private void onImage(Id id, Object data) {
-		User user = users.get(id);
-		user.addMessage(new ImageMessage(user, (ImageIcon)data));
-	}
-	
-	private void onLeave(Id id) {
-		User user = users.get(id);
-		users.remove(id);
+	private void onLeave(Connection connection) {
+		User user = users.get(connection);
+		users.remove(connection);
 		leaveListeners.forEach(l -> l.accept(user));
 	}
 	

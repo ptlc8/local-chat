@@ -13,4 +13,5 @@ public class MessageRenderer implements ListCellRenderer<Message> {
 	public Component getListCellRendererComponent(JList<? extends Message> list, Message value, int index, boolean isSelected, boolean cellHasFocus) {
 		return new MessagePanel(value, list.getWidth(), list.getHeight());
 	}
+	
 }

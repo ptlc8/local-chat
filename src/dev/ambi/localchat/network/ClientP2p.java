@@ -8,7 +8,6 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import dev.ambi.localchat.data.Id;
@@ -21,9 +20,8 @@ public class ClientP2p {
 	private ListeningServer listeningServer = null;
 	private HashMap<Id, IdentifiedConnection> connections = new HashMap<>();
 	
-	private ArrayList<Consumer<Id>> joinListeners = new ArrayList<>();
-	private ArrayList<Consumer<Id>> leaveListeners = new ArrayList<>();
-	private HashMap<Class<? extends Serializable>, ArrayList<BiConsumer<Id, Object>>> dataListeners = new HashMap<>();
+	private ArrayList<Consumer<IdentifiedConnection>> joinListeners = new ArrayList<>();
+	private ArrayList<Consumer<IdentifiedConnection>> leaveListeners = new ArrayList<>();
 	
 	public ClientP2p(int port) {
 		this.id = new Id();
@@ -138,21 +136,14 @@ public class ClientP2p {
 		}
 		connections.put(connection.getId(), connection);
 		System.out.println("[" + id + "] " + connection.getId() + " joins");
-		connection.addDataListener(d -> onData(connection, d));
 		connection.addCloseListener(() -> onLeave(connection));
-		joinListeners.forEach(l -> l.accept(connection.getId()));
-	}
-	
-	private void onData(IdentifiedConnection connection, Object data) {
-		ArrayList<BiConsumer<Id, Object>> listeners = dataListeners.get(data.getClass());
-		if (listeners == null) return;
-		listeners.forEach(l -> l.accept(connection.getId(), data));
+		joinListeners.forEach(l -> l.accept(connection));
 	}
 	
 	private void onLeave(IdentifiedConnection connection) {
 		connections.remove(connection.getId());
 		System.out.println("[" + id + "] " + connection.getId() + " leaves");
-		leaveListeners.forEach(l -> l.accept(connection.getId()));
+		leaveListeners.forEach(l -> l.accept(connection));
 	}
 	
 	
@@ -160,34 +151,22 @@ public class ClientP2p {
 		return id;
 	}
 	
-	public Set<Id> getUsers() {
+	public Set<Id> getIds() {
 		return connections.keySet();
 	}
 	
-	public void addJoinListener(Consumer<Id> listener) {
+	public void addJoinListener(Consumer<IdentifiedConnection> listener) {
 		joinListeners.add(listener);
 	}
 	
-	public void addLeaveListener(Consumer<Id> listener) {
+	public void addLeaveListener(Consumer<IdentifiedConnection> listener) {
 		leaveListeners.add(listener);
-	}
-	
-	public <T extends Serializable> void addDataListener(Class<T> clazz, BiConsumer<Id, Object> listener) {
-		if (!dataListeners.containsKey(clazz))
-			dataListeners.put(clazz, new ArrayList<>());
-		dataListeners.get(clazz).add(listener);
 	}
 	
 	public boolean send(Id id, Serializable data) {
 		if (!connections.containsKey(id))
 			return false;
-		try {
-			connections.get(id).send(data);
-			return true;
-		} catch (IOException e) {
-			e.printStackTrace();
-			return false;
-		}
+		return connections.get(id).send(data);
 	}
 	
 }

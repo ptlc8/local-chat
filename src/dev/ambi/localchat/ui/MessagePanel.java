@@ -2,8 +2,9 @@ package dev.ambi.localchat.ui;
 
 import javax.swing.JPanel;
 import dev.ambi.localchat.ImageLoader;
-import dev.ambi.localchat.data.ImageMessage;
 import dev.ambi.localchat.data.Message;
+import dev.ambi.localchat.data.ImageMessage;
+import dev.ambi.localchat.data.TextMessage;
 
 import javax.swing.JLabel;
 import javax.swing.BoxLayout;
@@ -29,13 +30,13 @@ public class MessagePanel extends JPanel {
 		contentLabel = new JLabel("content");
 		add(contentLabel);
 		senderLabel.setText(message.getSender().toString());
-		senderLabel.setForeground(new Color(message.getSender().getId().hashCode()));
+		senderLabel.setForeground(new Color(message.getSender().getColor()));
 		if (message instanceof ImageMessage) {
 			contentLabel.setIcon(ImageLoader.resize(((ImageMessage)message).getImage(), maxWidth, maxHeight));
 			contentLabel.setText("");
-		} else {
+		} else if (message instanceof TextMessage) {
 			contentLabel.setIcon(null);
-			contentLabel.setText(message.getContent());
+			contentLabel.setText(((TextMessage)message).getContent());
 		}
 	}
 }

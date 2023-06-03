@@ -39,9 +39,15 @@ public class Connection {
 		thread.start();
 	}
 	
-	public void send(Object data) throws IOException {
-		writer.writeObject(data);
-		writer.flush();
+	public boolean send(Object data) {
+		try {
+			writer.writeObject(data);
+			writer.flush();
+			return true;
+		} catch (IOException e) {
+			e.printStackTrace();
+			return false;
+		}
 	}
 	
 	public void close() {

@@ -12,6 +12,7 @@ import dev.ambi.localchat.data.Client;
 import dev.ambi.localchat.data.User;
 
 import javax.swing.JList;
+import javax.swing.JOptionPane;
 import javax.swing.ListSelectionModel;
 
 public class Window {
@@ -19,6 +20,7 @@ public class Window {
 	private JFrame frame;
 	private Client client;
 	private DefaultListModel<User> connectionsModel = new DefaultListModel<>();
+	private static final String NAME = "Local chat";
 
 	/**
 	 * Launch the application.
@@ -38,7 +40,8 @@ public class Window {
 	 * Create the application.
 	 */
 	public Window() {
-		client = new Client(8686);
+		String username = JOptionPane.showInputDialog(new JFrame(), "Choose a username", NAME, JOptionPane.QUESTION_MESSAGE);
+		client = new Client(8686, username);
 		initialize();
 		client.addJoinListener(this::onJoin);
 		client.addLeaveListener(this::onLeave);
@@ -50,9 +53,10 @@ public class Window {
 	 */
 	private void initialize() {
 		frame = new JFrame();
-		frame.setTitle("Local chat - " + client.getSelfUser());
+		frame.setTitle(NAME + " - " + client.getSelfUsername());
 		frame.setBounds(100, 100, 450, 300);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.setLocationRelativeTo(null);
 		
 		Box horizontalBox = Box.createHorizontalBox();
 		frame.getContentPane().add(horizontalBox, BorderLayout.NORTH);

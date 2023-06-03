@@ -7,25 +7,48 @@ import java.util.function.Consumer;
 
 import javax.swing.ImageIcon;
 
+import dev.ambi.localchat.network.Connection;
+
 public class User {
 	
-	private Client client;
-	private Id id;
+	private Connection connection;
+	private Username selfUsername;
+	private Username username;
 	private ArrayList<Message> messages = new ArrayList<>();
 	
 	private ArrayList<Consumer<Message>> messageListeners = new ArrayList<>();
 	
-	public User(Client client, Id id) {
-		this.client = client;
-		this.id = id;
+	public User(Username selfUsername, Connection connection) {
+		this.selfUsername = selfUsername;
+		this.connection = connection;
+		connection.addDataListener(this::onData);
+		connection.send(selfUsername);
 	}
 	
-	public Id getId() {
-		return id;
+	private void onData(Object data) {
+		System.out.println(data.getClass().getName());
+		if (username == null) {
+			if (data instanceof Username)
+				username = (Username) data;
+			else
+				return;
+		}
+		if (data instanceof String)
+			addMessage(new TextMessage(username, (String)data));
+		else if (data instanceof ImageIcon)
+			addMessage(new ImageMessage(username, (ImageIcon)data));
 	}
 	
-	public boolean sendMessage(String content) {
-		return client.sendMessage(this, content);
+	public void disconnect() {
+		connection.close();
+	}
+	
+	public Username getUsername() {
+		return username;
+	}
+	
+	void setUsername(Username username) {
+		this.username = username;
 	}
 	
 	void addMessage(Message message) {
@@ -36,9 +59,21 @@ public class User {
 	public List<Message> getMessages() {
 		return Collections.unmodifiableList(messages);
 	}
+	
+	public boolean sendMessage(String content) {
+		if (connection.send(content)) {
+			addMessage(new TextMessage(selfUsername, content));
+			return true;
+		}
+		return false;
+	}
 
 	public boolean sendImage(ImageIcon image) {
-		return client.sendImage(this, image);
+		if (connection.send(image)) {
+			addMessage(new ImageMessage(selfUsername, image));
+			return true;
+		}
+		return false;
 	}
 	
 	public void addMessageListener(Consumer<Message> listener) {
@@ -51,12 +86,12 @@ public class User {
 	
 	@Override
 	public String toString() {
-		return "User " + id;
+		return username == null ? "Unknown user" : username.getText();
 	}
 	
 	@Override
 	public boolean equals(Object obj) {
-		return this == obj || (obj instanceof User && ((User)obj).id.equals(id));
+		return this == obj || (obj instanceof User && ((User)obj).username.equals(username));
 	}
 	
 }
