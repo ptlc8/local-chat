@@ -29,14 +29,7 @@ public class Window {
 	 * Launch the application.
 	 */
 	public static void main(String[] args) {
-		EventQueue.invokeLater(() -> {
-			try {
-				Window window = new Window();
-				window.frame.setVisible(true);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		});
+		EventQueue.invokeLater(() -> new Window());
 	}
 
 	/**
@@ -44,10 +37,13 @@ public class Window {
 	 */
 	public Window() {
 		String username = JOptionPane.showInputDialog(new JFrame(), "Choose a username", NAME, JOptionPane.QUESTION_MESSAGE);
-		client = new Client(8686, username);
-		initialize();
-		client.addJoinListener(this::onJoin);
-		client.addLeaveListener(this::onLeave);
+		if (username != null || "".equals(username)) {
+			client = new Client(8686, username);
+			initialize();
+			client.addJoinListener(this::onJoin);
+			client.addLeaveListener(this::onLeave);
+			frame.setVisible(true);
+		}
 	}
 
 	/**
@@ -63,7 +59,7 @@ public class Window {
 		
 		Box horizontalBox = Box.createHorizontalBox();
 		frame.getContentPane().add(horizontalBox, BorderLayout.NORTH);
-		JCheckBox listeningCheckbox = new JCheckBox("Listening");
+		JCheckBox listeningCheckbox = new JCheckBox("Accept new users");
 		listeningCheckbox.addActionListener(e -> {
 			if (listeningCheckbox.isSelected())
 				listeningCheckbox.setSelected(client.getP2p().startListening());
@@ -73,7 +69,7 @@ public class Window {
 		listeningCheckbox.setSelected(client.getP2p().isListening());
 		horizontalBox.add(listeningCheckbox);
 		
-		JButton searchUsersBtn = new JButton("Search users");
+		JButton searchUsersBtn = new JButton("Search new users");
 		searchUsersBtn.addActionListener(e -> {
 			client.getP2p().searchPeers();
 		});

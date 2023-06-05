@@ -7,6 +7,7 @@ import java.io.ObjectOutputStream;
 import java.io.OptionalDataException;
 import java.io.Serializable;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.function.Consumer;
 
@@ -15,7 +16,6 @@ public class Connection {
 	private Socket socket;
 	private Thread thread;
 	private ObjectOutputStream writer;
-	private ObjectInputStream reader;
 	
 	private ArrayList<Consumer<Object>> dataListeners = new ArrayList<>();
 	private ArrayList<Runnable> closeListeners = new ArrayList<>();
@@ -23,29 +23,36 @@ public class Connection {
 	public Connection(Socket socket) throws IOException {
 		this.socket = socket;
 		writer = new ObjectOutputStream(socket.getOutputStream());
-		reader = new ObjectInputStream(socket.getInputStream());
 		thread = new Thread(() -> {
 			try {
+				ObjectInputStream reader = new ObjectInputStream(socket.getInputStream());
 				while (!socket.isClosed()) {
 					final Object data = reader.readObject();
 					for (int i = 0; i < dataListeners.size(); i++)
 						dataListeners.get(i).accept(data);
 				}
 			} catch (EOFException | OptionalDataException e) {
-				// do nothing
+				close();
 			} catch (IOException | ClassNotFoundException e) {
 				e.printStackTrace();
+				close();
 			}
-			close();
+			closeListeners.forEach(l -> l.run());
 		}, "Connection reader thread");
 		thread.start();
 	}
 	
 	public <T extends Serializable> boolean send(T data) {
+		if (data == null) return false;
+		if (socket.isClosed())
+			return false;
 		try {
 			writer.writeObject(data);
 			writer.flush();
 			return true;
+		} catch (SocketException e) {
+			close();
+			return false;
 		} catch (IOException e) {
 			e.printStackTrace();
 			return false;
@@ -53,15 +60,11 @@ public class Connection {
 	}
 	
 	public void close() {
-		thread.interrupt();
 		try {
-			writer.close();
-			reader.close();
 			socket.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		closeListeners.forEach(l -> l.run());
 	}
 	
 	public void addDataListener(Consumer<Object> listener) {

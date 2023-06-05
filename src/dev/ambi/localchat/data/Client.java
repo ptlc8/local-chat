@@ -24,6 +24,7 @@ public class Client {
 		p2p = new ClientP2p(port);
 		p2p.addJoinListener(this::onJoin);
 		p2p.addLeaveListener(this::onLeave);
+		System.out.println("[" + hashCode() + "] Ready with username " + username);
 		p2p.startListening();
 		p2p.searchPeers();
 	}

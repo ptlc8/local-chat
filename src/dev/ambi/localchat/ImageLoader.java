@@ -13,6 +13,8 @@ public class ImageLoader {
 			return name.endsWith(".jpg") || name.endsWith(".png") || name.endsWith(".jpeg") || name.endsWith(".gif");
 		});
 		imageChooser.setVisible(true);
+		if (imageChooser.getFile() == null)
+			return null;
 		return get(imageChooser.getDirectory() + imageChooser.getFile());
 	}
 	

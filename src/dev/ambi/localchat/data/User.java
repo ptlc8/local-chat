@@ -33,8 +33,8 @@ public class User {
 	}
 	
 	private void onData(Object data) {
-		System.out.println(data);
-		if (Request.IDENTIFY.equals(data)) {
+		if (data == null) return;
+		if ("requestusername".equals(data)) {
 			connection.send("username " + selfUser.getName());
 			return;
 		}
@@ -57,16 +57,18 @@ public class User {
 	}
 	
 	public void identify() {
+		System.out.println("identiy request loop starting");
 		new Thread(() -> {
 			try {
 				while (!connection.isClosed() && name == null) {
-					connection.send(Request.IDENTIFY);
-						Thread.sleep(100);
+					connection.send("requestusername");
+					Thread.sleep(100);
 				}
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
-		}, "Waiting identify thread").run();
+		}, "Waiting identify thread").start();
+		System.out.println("identiy request loop started");
 	}
 	
 	public void disconnect() {
