@@ -2,31 +2,32 @@ package dev.ambi.localchat.ui;
 
 import javax.swing.JPanel;
 
-import dev.ambi.localchat.ImageLoader;
 import dev.ambi.localchat.data.Message;
 import dev.ambi.localchat.data.User;
+import dev.ambi.localchat.files.Files;
+import dev.ambi.localchat.files.Images;
 
 import java.util.function.Consumer;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import javax.swing.JList;
-import javax.swing.DefaultListModel;
+import javax.swing.ImageIcon;
 import javax.swing.border.LineBorder;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.Box;
 import javax.swing.JButton;
 import javax.swing.ScrollPaneConstants;
+import javax.swing.BoxLayout;
 
 public class UserPanel extends JPanel {
 
 	private static final long serialVersionUID = 1L;
-	private DefaultListModel<Message> messagesModel = new DefaultListModel<>();
+	private JPanel messagesPanel;
 	private User user = null;
 	private Consumer<Message> onMessage;
 	private JTextField messageField;
-	private JButton imageBtn;
+	private JButton imageBtn, fileBtn;
 
 	/**
 	 * Create the panel.
@@ -34,11 +35,11 @@ public class UserPanel extends JPanel {
 	public UserPanel(User user) {
 		setLayout(new BorderLayout(0, 0));
 		
-		JList<Message> list = new JList<>(messagesModel);
-		list.setBorder(new LineBorder(new Color(0, 0, 0)));
-		list.setCellRenderer(new MessageRenderer());
+		messagesPanel = new JPanel();
+		messagesPanel.setLayout(new BoxLayout(messagesPanel, BoxLayout.Y_AXIS));
+		messagesPanel.setBorder(new LineBorder(new Color(0, 0, 0)));
 		
-		JScrollPane scrollPane = new JScrollPane(list);
+		JScrollPane scrollPane = new JScrollPane(messagesPanel);
 		scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 		add(scrollPane);
 		
@@ -56,26 +57,43 @@ public class UserPanel extends JPanel {
 		
 		imageBtn = new JButton("Image");
 		imageBtn.addActionListener(e -> {
-			if (this.user != null)
-				this.user.sendImage(ImageLoader.prompt());
+			ImageIcon image = Images.prompt();
+			if (image != null)
+				this.user.sendImage(image);
 		});
 		horizontalBox.add(imageBtn);
 		
-		onMessage = m -> messagesModel.addElement(m);
+		fileBtn = new JButton("File");
+		fileBtn.addActionListener(e -> {
+			String path = Files.promptPath();
+			if (path != null)
+				this.user.sendFileOffer(path);
+		});
+		horizontalBox.add(fileBtn);
+		
+		onMessage = m -> {
+			messagesPanel.add(new MessagePanel(m, messagesPanel.getWidth(), messagesPanel.getHeight()));
+			validate();
+		};
 		setUser(user);
 	}
 	
 	public void setUser(User user) {
 		if (this.user != null)
 			this.user.removeMessageListener(this.onMessage);
-		messagesModel.clear();
+		messagesPanel.removeAll();
 		
 		this.user = user;
 		messageField.setEnabled(user != null);
 		imageBtn.setEnabled(user != null);
-		if (user == null) return;
+		fileBtn.setEnabled(user != null);
 		
-		messagesModel.addAll(user.getMessages());
-		user.addMessageListener(this.onMessage);
+		if (user != null) {
+			for (Message m : user.getMessages())
+				messagesPanel.add(new MessagePanel(m, messagesPanel.getWidth(), messagesPanel.getHeight()));
+			user.addMessageListener(this.onMessage);
+		}
+		
+		validate();
 	}
 }

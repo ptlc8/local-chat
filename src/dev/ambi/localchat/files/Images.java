@@ -1,21 +1,14 @@
-package dev.ambi.localchat;
-import java.awt.FileDialog;
+package dev.ambi.localchat.files;
+
 import java.awt.Image;
-
 import javax.swing.ImageIcon;
-import javax.swing.JFrame;
 
-public class ImageLoader {
+public class Images {
 	
 	public static ImageIcon prompt() {
-		FileDialog imageChooser = new FileDialog(new JFrame());
-		imageChooser.setFilenameFilter((dir, name) -> {
+		return get(Files.promptPath((dir, name) -> {
 			return name.endsWith(".jpg") || name.endsWith(".png") || name.endsWith(".jpeg") || name.endsWith(".gif");
-		});
-		imageChooser.setVisible(true);
-		if (imageChooser.getFile() == null)
-			return null;
-		return get(imageChooser.getDirectory() + imageChooser.getFile());
+		}));
 	}
 	
 	public static ImageIcon get(String filename) {
