@@ -94,6 +94,7 @@ public class UserPanel extends JPanel {
 			user.addMessageListener(this.onMessage);
 		}
 		
-		validate();
+		revalidate();
+		repaint();
 	}
 }

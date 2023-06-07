@@ -1,22 +1,21 @@
 package dev.ambi.localchat.ui;
 
-import java.awt.EventQueue;
-import javax.swing.JFrame;
-import javax.swing.JButton;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 
 import javax.swing.Box;
 import javax.swing.DefaultListModel;
+import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import dev.ambi.localchat.data.Client;
-import dev.ambi.localchat.data.User;
-
+import javax.swing.JFrame;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.ListSelectionModel;
 import javax.swing.ScrollPaneConstants;
+
+import dev.ambi.localchat.data.Client;
+import dev.ambi.localchat.data.User;
 
 public class Window {
 
@@ -24,13 +23,6 @@ public class Window {
 	private Client client;
 	private DefaultListModel<User> connectionsModel = new DefaultListModel<>();
 	private static final String NAME = "Local chat";
-
-	/**
-	 * Launch the application.
-	 */
-	public static void main(String[] args) {
-		EventQueue.invokeLater(() -> new Window());
-	}
 
 	/**
 	 * Create the application.
@@ -95,6 +87,7 @@ public class Window {
 	
 	private void onJoin(User user) {
 		connectionsModel.addElement(user);
+		frame.validate();
 	}
 	
 	private void onLeave(User user) {
